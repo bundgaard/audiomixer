@@ -1,62 +1,58 @@
-#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 
 #include <Windows.h>
-
 #include <mmdeviceapi.h>
-#include <mmsystem.h>
+#include <endpointvolume.h>
 
-void listMixerDevices()
-{
-    MMRESULT mr;
-    UINT numDevs = mixerGetNumDevs();
+#include "safe_release.h"
 
-    std::cout << "Mixer: " << numDevs << std::endl;
+const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
+const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 
-    for (auto i = 0; i < numDevs; i++)
-    {
-        MIXERCAPS mixerCaps;
-        mr = mixerGetDevCaps(i, &mixerCaps, sizeof(MIXERCAPS));
-        if (mr != MMSYSERR_NOERROR)
-        {
-            std::cout << "mixerGetDevCaps failure" << mr << std::endl;
-            return;
-        }
-
-        std::cout << "Name: " << mixerCaps.szPname << std::endl;
-    }
-}
 
 int main()
 {
-    MMRESULT mr;
-    std::cout << "\t\tMixer devices" << std::endl;
+    int result = 0;
+    HRESULT hr;
 
-    listMixerDevices();
-    HMIXER hMixer;
-    mr = mixerOpen(&hMixer, 0, NULL, NULL, MIXER_OBJECTF_MIXER);
-    if (mr != MMSYSERR_NOERROR)
-    {
-        std::cout << "mixerOpen encountered error" << mr << std::endl;
-        return 2;
-    }
-    MIXERLINE mixerLine = {0};
-    mixerLine.dwComponentType = MIXERLINE_COMPONENTTYPE_SRC_MICROPHONE;
-    mixerLine.cbStruct = sizeof(MIXERLINE);
+    IMMDeviceEnumerator *deviceEnumerator = nullptr;
+    IMMDeviceCollection *deviceCollection = nullptr;
+    UINT deviceCount = 0;
 
-    mr = mixerGetLineInfo(reinterpret_cast<HMIXEROBJ>(hMixer), &mixerLine,
-                          MIXER_OBJECTF_HMIXER | MIXER_GETLINEINFOF_COMPONENTTYPE);
-    if (mr != MMSYSERR_NOERROR)
+    hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+    if (FAILED(hr))
     {
-        std::cout << "getLine encountered error" << mr << std::endl;
-        return 99;
-    }
-    std::cout << mixerLine.szName << std::endl;
-    mr = mixerClose(hMixer);
-    if (mr != MMSYSERR_NOERROR)
-    {
-        std::cout << "mixerOpen encountered error" << mr << std::endl;
-        return 3;
+        printf("Unable to initialize COM: %lx\n", hr);
+        result = -1;
+        goto Exit;
     }
 
-    return 0;
+
+    hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&deviceEnumerator));
+    if (FAILED(hr))
+    {
+        printf("Unable to initialize COM: %lx\n", hr);
+        result = -1;
+        goto Exit;
+    }
+
+    hr = deviceEnumerator->EnumAudioEndpoints(eCapture, DEVICE_STATE_ACTIVE, &deviceCollection);
+    if (FAILED(hr))
+    {
+        printf("Unable to iterate over endpoints: %lx\n", hr);
+        result = -1;
+        goto Exit;
+    }
+    deviceCollection->GetCount(&deviceCount);
+    printf("Devices %u\n", deviceCount);
+    
+
+    Exit:
+    SafeRelease(&deviceCollection);
+    SafeRelease(&deviceEnumerator);
+    CoUninitialize();
+
+    return result;
 }
