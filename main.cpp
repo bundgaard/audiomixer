@@ -2,57 +2,71 @@
 #include <cstring>
 #include <cstdlib>
 
-#include <Windows.h>
-#include <mmdeviceapi.h>
-#include <endpointvolume.h>
-
-#include "safe_release.h"
+#include "audiomixer.h"
 
 const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
 const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 
 
-int main()
+wchar_t szClassName[] = L"AClassName";
+wchar_t szCaption[] = L"aCaption";
+
+bool AMCreateWindow(HINSTANCE hInst)
 {
-    int result = 0;
-    HRESULT hr;
+    WNDCLASSEX wc = {0};
 
-    IMMDeviceEnumerator *deviceEnumerator = nullptr;
-    IMMDeviceCollection *deviceCollection = nullptr;
-    UINT deviceCount = 0;
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpszClassName = szClassName;
+    wc.lpfnWndProc = (WNDPROC) AMWndProc;
+    wc.hInstance = hInst;
+    wc.lpszMenuName = nullptr;
 
-    hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-    if (FAILED(hr))
+    wc.hCursor = static_cast<HCURSOR>(LoadCursor(nullptr, IDC_ARROW));
+    wc.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
+    wc.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
+    wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+
+    wc.cbWndExtra = 0;
+    wc.cbClsExtra = 0;
+
+
+    if (RegisterClassEx(&wc) == 0)
     {
-        printf("Unable to initialize COM: %lx\n", hr);
-        result = -1;
-        goto Exit;
+        printf("failed to register window");
+        return false;
     }
 
+    return true;
+}
 
-    hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&deviceEnumerator));
-    if (FAILED(hr))
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpszArg, int nCmdShow)
+{
+
+    if (!AMCreateWindow(hInst))
     {
-        printf("Unable to initialize COM: %lx\n", hr);
-        result = -1;
-        goto Exit;
+        return -1;
     }
 
-    hr = deviceEnumerator->EnumAudioEndpoints(eCapture, DEVICE_STATE_ACTIVE, &deviceCollection);
-    if (FAILED(hr))
+    HWND hwnd = CreateWindow(szClassName, szCaption,
+                             (WS_VISIBLE | WS_POPUPWINDOW |WS_THICKFRAME) ,
+                             CW_USEDEFAULT, CW_USEDEFAULT,
+                             640, 480,
+                             nullptr,
+                             nullptr,
+                             hInst,
+                             nullptr);
+
+
+    ShowWindow(hwnd, nCmdShow);
+    UpdateWindow(hwnd);
+
+    MSG msg;
+    while (GetMessage(&msg, nullptr, 0, 0))
     {
-        printf("Unable to iterate over endpoints: %lx\n", hr);
-        result = -1;
-        goto Exit;
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
     }
-    deviceCollection->GetCount(&deviceCount);
-    printf("Devices %u\n", deviceCount);
-    
-
-    Exit:
-    SafeRelease(&deviceCollection);
-    SafeRelease(&deviceEnumerator);
-    CoUninitialize();
-
-    return result;
+    return static_cast<int>(msg.wParam);
 }
