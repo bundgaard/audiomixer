@@ -1,5 +1,4 @@
 #include "audiomixer.h"
-#include <cstdio>
 
 typedef struct tagCOLORPENBRUSH
 {
@@ -103,6 +102,7 @@ LRESULT CALLBACK AMWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                      DT_SINGLELINE | DT_VCENTER | DT_CENTER);
             EndPaint(hwnd, &ps);
             DestroyColorPenBrush(&buttonPenBrush);
+            DestroyColorPenBrush(&moveableAreaPenBrush);
             return 0;
         case WM_DESTROY:
             PostQuitMessage(0);
