@@ -50,7 +50,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpszArg, int nCmdShow
     }
 
     HWND hwnd = CreateWindow(szClassName, szCaption,
-                             (WS_VISIBLE | WS_POPUPWINDOW |WS_THICKFRAME) ,
+                             (WS_POPUP) & ~(WS_THICKFRAME) ,
                              CW_USEDEFAULT, CW_USEDEFAULT,
                              640, 480,
                              nullptr,

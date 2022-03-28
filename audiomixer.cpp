@@ -1,49 +1,51 @@
 #include "audiomixer.h"
-
-typedef struct tagCOLORPENBRUSH
-{
-    COLORREF color;
-    HPEN pen;
-    HBRUSH brush;
-} T_COLORPENBRUSH, *PT_COLORPENBRUSH;
-
-bool CreateColorPenBrush(PT_COLORPENBRUSH colorPenBrushStruct, COLORREF color)
-{
-    LOGBRUSH lb;
-
-    if (colorPenBrushStruct == nullptr)
-    {
-        return false;
-    }
-    colorPenBrushStruct->color = color;
-    colorPenBrushStruct->pen = CreatePen(PS_SOLID, 0, color);
-    lb.lbColor = color;
-    lb.lbStyle = BS_SOLID;
-
-    colorPenBrushStruct->brush = CreateBrushIndirect(&lb);
-    return true;
-
-}
-
-bool DestroyColorPenBrush(PT_COLORPENBRUSH ptColorpenbrush)
-{
-    if (ptColorpenbrush == nullptr)
-        return false;
-
-    ptColorpenbrush->color = 0;
-    if (ptColorpenbrush->pen != nullptr)
-    {
-        DeleteObject(ptColorpenbrush->pen);
-    }
-    ptColorpenbrush->pen = nullptr;
-    if (ptColorpenbrush->brush != nullptr)
-    {
-        DeleteObject(ptColorpenbrush->brush);
-    }
-    ptColorpenbrush->brush = nullptr;
-}
+#include "penbrush.h"
 
 static RECT rectDraggable = {10, 10, 100, 100};
+
+void DrawMoveable(HDC hdc, T_COLORPENBRUSH *moveableAreaPenBrushOut)
+{
+    T_COLORPENBRUSH moveableAreaPenBrush;
+    CreateColorPenBrush(&moveableAreaPenBrush, RGB(64, 64, 255));
+    SelectObject(hdc, moveableAreaPenBrush.pen);
+    SelectObject(hdc, moveableAreaPenBrush.brush);
+    RoundRect(hdc, rectDraggable.left, rectDraggable.top, rectDraggable.right, rectDraggable.bottom, 32, 32);
+
+    *moveableAreaPenBrushOut = moveableAreaPenBrush;
+
+}
+
+void DrawPushButton(HDC hdc, T_COLORPENBRUSH *out, RECT rct)
+{
+    T_COLORPENBRUSH buttonPenBrush;
+    CreateColorPenBrush(&buttonPenBrush, RGB(202, 2, 2));
+
+    SelectObject(hdc, buttonPenBrush.pen);
+    SelectObject(hdc, buttonPenBrush.brush);
+
+
+    RoundRect(hdc, rct.left, rct.top, rct.right, rct.bottom, 32, 32);
+    DrawText(hdc,
+             L"MUTE",
+             static_cast<int>(wcslen(L"MUTE")),
+             &rct,
+             DT_SINGLELINE | DT_VCENTER | DT_CENTER);
+    *out = buttonPenBrush;
+
+}
+
+void DrawExitArea(HDC hdc, T_COLORPENBRUSH *out)
+{
+    T_COLORPENBRUSH penbrush;
+    RECT rct = {0, 0, 50, 50};
+    CreateColorPenBrush(&penbrush, RGB(0, 255, 0));
+    SelectObject(hdc, penbrush.brush);
+    SelectObject(hdc, penbrush.pen);
+    RoundRect(hdc, rct.left, rct.top, rct.right, rct.bottom, 8, 8);
+
+    DrawText(hdc, L"X", static_cast<int>(wcslen(L"X")), &rct, DT_SINGLELINE | DT_VCENTER | DT_CENTER);
+    *out = penbrush;
+}
 
 LRESULT CALLBACK AMWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -71,6 +73,12 @@ LRESULT CALLBACK AMWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             rct.top += 40;
             rct.right -= 40;
             rct.bottom -= 40;
+
+            RECT rctExitArea;
+            GetClientRect(hwnd, &rctExitArea);
+            rctExitArea.left = rct.right - 40;
+            rctExitArea.bottom = rct.top + 40;
+
             LOGFONT lf;
             ZeroMemory(&lf, sizeof(LOGFONT));
             lf.lfHeight = 72;
@@ -81,28 +89,17 @@ LRESULT CALLBACK AMWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SelectObject(hdc, pHfont);
             SetBkMode(hdc, TRANSPARENT);
             SetTextColor(hdc, RGB(255, 255, 255));
+            T_COLORPENBRUSH  exitAreaBrush;
+            DrawExitArea(hdc, &exitAreaBrush);
+
             T_COLORPENBRUSH moveableAreaPenBrush;
-            CreateColorPenBrush(&moveableAreaPenBrush, RGB(64, 64, 255));
-            SelectObject(hdc, moveableAreaPenBrush.pen);
-            SelectObject(hdc, moveableAreaPenBrush.brush);
-            RoundRect(hdc, rectDraggable.left, rectDraggable.top, rectDraggable.right, rectDraggable.bottom, 32, 32);
-
+            DrawMoveable(hdc, &moveableAreaPenBrush);
             T_COLORPENBRUSH buttonPenBrush;
-            CreateColorPenBrush(&buttonPenBrush, RGB(202, 2, 2));
-
-            SelectObject(hdc, buttonPenBrush.pen);
-            SelectObject(hdc, buttonPenBrush.brush);
-
-
-            RoundRect(hdc, rct.left, rct.top, rct.right, rct.bottom, 32, 32);
-            DrawText(hdc,
-                     L"MUTE",
-                     static_cast<int>(wcslen(L"MUTE")),
-                     &rct,
-                     DT_SINGLELINE | DT_VCENTER | DT_CENTER);
+            DrawPushButton(hdc, &buttonPenBrush, rct);
             EndPaint(hwnd, &ps);
             DestroyColorPenBrush(&buttonPenBrush);
             DestroyColorPenBrush(&moveableAreaPenBrush);
+            DestroyColorPenBrush(&exitAreaBrush);
             return 0;
         case WM_DESTROY:
             PostQuitMessage(0);
