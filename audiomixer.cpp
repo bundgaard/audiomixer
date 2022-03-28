@@ -1,7 +1,8 @@
 #include "audiomixer.h"
 #include "penbrush.h"
 
-static RECT rectDraggable = {10, 10, 100, 100};
+static RECT rectDraggable = {10, 10, 74, 74};
+static bool isMoving = false;
 
 void DrawMoveable(HDC hdc, T_COLORPENBRUSH *moveableAreaPenBrushOut)
 {
@@ -10,6 +11,10 @@ void DrawMoveable(HDC hdc, T_COLORPENBRUSH *moveableAreaPenBrushOut)
     SelectObject(hdc, moveableAreaPenBrush.pen);
     SelectObject(hdc, moveableAreaPenBrush.brush);
     RoundRect(hdc, rectDraggable.left, rectDraggable.top, rectDraggable.right, rectDraggable.bottom, 32, 32);
+    HCURSOR pHicon = LoadCursor(nullptr, IDC_CROSS);
+
+    DrawIconEx(hdc, rectDraggable.left, rectDraggable.top, pHicon, 64, 64, 0, nullptr, DI_NORMAL);
+
 
     *moveableAreaPenBrushOut = moveableAreaPenBrush;
 
@@ -34,10 +39,12 @@ void DrawPushButton(HDC hdc, T_COLORPENBRUSH *out, RECT rct)
 
 }
 
-void DrawExitArea(HDC hdc, T_COLORPENBRUSH *out)
+void DrawExitArea(HWND hwnd, HDC hdc, T_COLORPENBRUSH *out)
 {
     T_COLORPENBRUSH penbrush;
-    RECT rct = {0, 0, 50, 50};
+    RECT clientRect = {0};
+    GetClientRect(hwnd, &clientRect);
+    RECT rct = {clientRect.right - 25, 0, clientRect.right, 25};
     CreateColorPenBrush(&penbrush, RGB(0, 255, 0));
     SelectObject(hdc, penbrush.brush);
     SelectObject(hdc, penbrush.pen);
@@ -45,6 +52,17 @@ void DrawExitArea(HDC hdc, T_COLORPENBRUSH *out)
 
     DrawText(hdc, L"X", static_cast<int>(wcslen(L"X")), &rct, DT_SINGLELINE | DT_VCENTER | DT_CENTER);
     *out = penbrush;
+}
+
+void CreateFont(HFONT *hFont, LONG fontSize)
+{
+    LOGFONT lf;
+    ZeroMemory(&lf, sizeof(LOGFONT));
+    lf.lfHeight = fontSize;
+    lf.lfWeight = 800;
+    wcscpy_s(lf.lfFaceName, L"Comic Code");
+    *hFont = CreateFontIndirect(&lf);
+
 }
 
 LRESULT CALLBACK AMWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -55,6 +73,8 @@ LRESULT CALLBACK AMWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     switch (msg)
     {
+        case WM_MOUSEMOVE:
+            return 0;
         case WM_NCHITTEST:
         {
             const LRESULT result = DefWindowProc(hwnd, msg, wParam, lParam);
@@ -79,24 +99,21 @@ LRESULT CALLBACK AMWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             rctExitArea.left = rct.right - 40;
             rctExitArea.bottom = rct.top + 40;
 
-            LOGFONT lf;
-            ZeroMemory(&lf, sizeof(LOGFONT));
-            lf.lfHeight = 72;
-            lf.lfWeight = 800;
-            wcscpy_s(lf.lfFaceName, L"Comic Code");
-            pHfont = CreateFontIndirect(&lf);
 
-            SelectObject(hdc, pHfont);
+            HFONT hFont;
+            CreateFont(&hFont, 72);
+            SelectObject(hdc, hFont);
             SetBkMode(hdc, TRANSPARENT);
             SetTextColor(hdc, RGB(255, 255, 255));
-            T_COLORPENBRUSH  exitAreaBrush;
-            DrawExitArea(hdc, &exitAreaBrush);
-
+            T_COLORPENBRUSH exitAreaBrush;
             T_COLORPENBRUSH moveableAreaPenBrush;
-            DrawMoveable(hdc, &moveableAreaPenBrush);
             T_COLORPENBRUSH buttonPenBrush;
+            DrawExitArea(hwnd, hdc, &exitAreaBrush);
+            DrawMoveable(hdc, &moveableAreaPenBrush);
             DrawPushButton(hdc, &buttonPenBrush, rct);
+
             EndPaint(hwnd, &ps);
+            DeleteObject(&hFont);
             DestroyColorPenBrush(&buttonPenBrush);
             DestroyColorPenBrush(&moveableAreaPenBrush);
             DestroyColorPenBrush(&exitAreaBrush);
