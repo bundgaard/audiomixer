@@ -11,6 +11,71 @@ const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 wchar_t szClassName[] = L"AClassName";
 wchar_t szCaption[] = L"aCaption";
 
+int GetWidth(RECT rct)
+{
+	return rct.right - rct.left;
+}
+
+int GetHeight(RECT rct)
+{
+	return rct.bottom - rct.top;
+}
+
+static bool CenterWindow(HWND hwndChild, HWND hwndParent)
+{
+
+	RECT    rcChild, rcParent;
+	int     cxChild, cyChild, cxParent, cyParent;
+	int     cxScreen, cyScreen, xNew, yNew;
+	HDC     hdc;
+
+	// Get the Height and Width of the child window
+	GetWindowRect(hwndChild, &rcChild);
+	cxChild = rcChild.right - rcChild.left;
+	cyChild = rcChild.bottom - rcChild.top;
+
+	// Get the Height and Width of the parent window
+	GetWindowRect(hwndParent, &rcParent);
+	cxParent = rcParent.right - rcParent.left;
+	cyParent = rcParent.bottom - rcParent.top;
+
+	// Get the display limits
+	hdc = GetDC(hwndChild);
+	cxScreen = GetDeviceCaps(hdc, HORZRES);
+	cyScreen = GetDeviceCaps(hdc, VERTRES);
+	ReleaseDC(hwndChild, hdc);
+
+	// Calculate new X position, then adjust for screen
+	xNew = rcParent.left + ((cxParent - cxChild) / 2);
+	if (xNew < 0)
+	{
+		xNew = 0;
+	}
+	else if ((xNew + cxChild) > cxScreen)
+	{
+		xNew = cxScreen - cxChild;
+	}
+
+	// Calculate new Y position, then adjust for screen
+	yNew = rcParent.top + ((cyParent - cyChild) / 2);
+	if (yNew < 0)
+	{
+		yNew = 0;
+	}
+	else if ((yNew + cyChild) > cyScreen)
+	{
+		yNew = cyScreen - cyChild;
+	}
+
+	// Set it, and return
+	return SetWindowPos(hwndChild,
+		NULL,
+		xNew, yNew,
+		0, 0,
+		SWP_NOSIZE | SWP_NOZORDER);
+
+}
+
 bool AMCreateWindow(HINSTANCE hInst)
 {
     WNDCLASSEX wc = {0};
@@ -43,7 +108,7 @@ bool AMCreateWindow(HINSTANCE hInst)
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpszArg, int nCmdShow)
 {
-
+    
     if (!AMCreateWindow(hInst))
     {
         return -1;
@@ -62,11 +127,13 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpszArg, int nCmdShow
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
+    CenterWindow(hwnd, GetDesktopWindow());
     MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0))
     {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+   
     return static_cast<int>(msg.wParam);
 }
