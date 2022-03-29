@@ -1,8 +1,8 @@
-int main(int argc, char **argv, char **env)
-{
-printf("argc %d, '%s' '%s'\n", argc, argv[0], env[0]);
-int result = 0;
-HRESULT hr;
+    int main(int argc, char **argv, char **env)
+    {
+    printf("argc %d, '%s' '%s'\n", argc, argv[0], env[0]);
+    int result = 0;
+    HRESULT hr;
 
     IMMDeviceEnumerator *deviceEnumerator = nullptr;
     IMMDeviceCollection *deviceCollection = nullptr;
@@ -87,4 +87,4 @@ HRESULT hr;
     CoUninitialize();
 
     return result;
-}
+    }

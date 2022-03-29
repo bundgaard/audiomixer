@@ -4,9 +4,10 @@
 
 
 static RECT rectDraggable = { 10, 10, 74, 74 };
+static RECT rectExit = {640 - 74, 10, 640, 74};
 static bool isMoving = false;
 
-void DrawMoveable(HDC hdc, T_COLORPENBRUSH* moveableAreaPenBrushOut)
+void DrawMoveable(HDC hdc, T_COLORPENBRUSH *moveableAreaPenBrushOut, bool b)
 {
 	T_COLORPENBRUSH moveableAreaPenBrush;
 	CreateColorPenBrush(&moveableAreaPenBrush, RGB(64, 64, 255));
@@ -22,7 +23,7 @@ void DrawMoveable(HDC hdc, T_COLORPENBRUSH* moveableAreaPenBrushOut)
 
 }
 
-void DrawPushButton(HDC hdc, T_COLORPENBRUSH* out, RECT rct)
+void DrawPushButton(HDC hdc, T_COLORPENBRUSH *out, RECT rct, bool b)
 {
 	T_COLORPENBRUSH buttonPenBrush;
 	CreateColorPenBrush(&buttonPenBrush, RGB(202, 2, 2));
@@ -41,18 +42,15 @@ void DrawPushButton(HDC hdc, T_COLORPENBRUSH* out, RECT rct)
 
 }
 
-void DrawExitArea(HWND hwnd, HDC hdc, T_COLORPENBRUSH* out)
+void DrawExitArea(HWND hwnd, HDC hdc, T_COLORPENBRUSH *out, bool b)
 {
 	T_COLORPENBRUSH penbrush;
-	RECT clientRect = { 0 };
-	GetClientRect(hwnd, &clientRect);
-	RECT rct = { clientRect.right - 25, 0, clientRect.right, 25 };
 	CreateColorPenBrush(&penbrush, RGB(0, 255, 0));
 	SelectObject(hdc, penbrush.brush);
 	SelectObject(hdc, penbrush.pen);
-	RoundRect(hdc, rct.left, rct.top, rct.right, rct.bottom, 8, 8);
+	RoundRect(hdc, rectExit.left, rectExit.top, rectExit.right, rectExit.bottom, 8, 8);
 
-	DrawText(hdc, L"X", static_cast<int>(wcslen(L"X")), &rct, DT_SINGLELINE | DT_VCENTER | DT_CENTER);
+	DrawText(hdc, L"X", static_cast<int>(wcslen(L"X")), &rectExit, DT_SINGLELINE | DT_VCENTER | DT_CENTER);
 	*out = penbrush;
 }
 
@@ -80,17 +78,12 @@ LRESULT CALLBACK AMWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	static POINT lastMousePt;
 	static bool insideDraggable = false;
 	static bool insideExit = false;
-	static RECT rectExit;
+    static bool insidePushButton = false;
+
 	switch (msg)
 	{
 	case WM_NCCREATE:
 	{
-		RECT clientRect = { 0 };
-		GetClientRect(hwnd, &clientRect);
-		rectExit = RECT{ 600, 0,
-			640, 25
-		};
-
 		GetCursorPos(&lastMousePt);
 	}
 	break;
@@ -142,29 +135,21 @@ LRESULT CALLBACK AMWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_PAINT:
 	{
 		hdc = BeginPaint(hwnd, &ps);
-		RECT rct;
-		GetClientRect(hwnd, &rct);
-		rct.left += 40;
-		rct.top += 40;
-		rct.right -= 40;
-		rct.bottom -= 40;
+		RECT pushButtonArea;
+		GetWindowRect(hwnd, &pushButtonArea);
+        pushButtonArea.left += 64;
+        pushButtonArea.top += 64;
+        pushButtonArea.right -= 74;
+        pushButtonArea.bottom -= 74;
 
 		HFONT hFont;
 		CreateFont(&hFont, 72);
 		SelectObject(hdc, hFont);
 		SetBkMode(hdc, TRANSPARENT);
 		SetTextColor(hdc, RGB(255, 255, 255));
-		if (insideDraggable) {
-			DrawMoveable(hdc, &moveableAreaPenBrush);
-		}
-		else {
-			RoundRect(hdc, rectDraggable.left, rectDraggable.top, rectDraggable.right, rectDraggable.bottom, 32, 32);
-		}
-
-
-		DrawExitArea(hwnd, hdc, &exitAreaBrush);
-
-		DrawPushButton(hdc, &buttonPenBrush, rct);
+        DrawMoveable(hdc, &moveableAreaPenBrush, insideDraggable);
+        DrawExitArea(hwnd, hdc, &exitAreaBrush, insideExit);
+        DrawPushButton(hdc, &buttonPenBrush, pushButtonArea, insidePushButton);
 
 		EndPaint(hwnd, &ps);
 
