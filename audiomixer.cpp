@@ -6,6 +6,7 @@ static int buttonWidth = 64;
 static int buttonHeight = 64;
 static RECT rectDraggable = {10, 10, buttonWidth, buttonHeight};
 static RECT rectExit = {640 - buttonWidth, 10, 640, buttonHeight};
+static RECT rectPushButtonArea = {64, 64, 640 - 64, 480 - 64};
 static bool isMoving = false;
 
 void DrawMoveable(HDC hdc, T_COLORPENBRUSH *moveableAreaPenBrushOut, bool b)
@@ -18,7 +19,7 @@ void DrawMoveable(HDC hdc, T_COLORPENBRUSH *moveableAreaPenBrushOut, bool b)
     HCURSOR pHicon = LoadCursor(nullptr, IDC_SIZEALL);
 
     DrawIconEx(hdc,
-               0, 0,
+               6, 4,
                pHicon,
                buttonWidth, buttonHeight,
                0,
@@ -106,11 +107,9 @@ LRESULT CALLBACK AMWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             if (PtInRect(&rectDraggable, lastMousePt) == TRUE)
             {
                 insideDraggable = true;
-                InvalidateRect(hwnd, &rectDraggable, FALSE);
             } else
             {
                 insideDraggable = false;
-                InvalidateRect(hwnd, &rectDraggable, FALSE);
             }
 
             if (PtInRect(&rectExit, lastMousePt) == TRUE)
@@ -122,6 +121,12 @@ LRESULT CALLBACK AMWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             } else
             {
                 insideExit = false;
+            }
+
+            if(PtInRect(&rectPushButtonArea, lastMousePt) ==TRUE) {
+                insidePushButton = true;
+            } else {
+                insidePushButton = false;
             }
             lastMousePt = POINT{x, y};
 
@@ -144,12 +149,12 @@ LRESULT CALLBACK AMWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_PAINT:
         {
             hdc = BeginPaint(hwnd, &ps);
-            RECT pushButtonArea;
-            GetWindowRect(hwnd, &pushButtonArea);
-            pushButtonArea.left += 64;
-            pushButtonArea.top += 64;
-            pushButtonArea.right -= 74;
-            pushButtonArea.bottom -= 74;
+
+            GetWindowRect(hwnd, &rectPushButtonArea);
+            rectPushButtonArea.left += 64;
+            rectPushButtonArea.top += 64;
+            rectPushButtonArea.right -= 74;
+            rectPushButtonArea.bottom -= 74;
 
             HFONT hFont;
             CreateFont(&hFont, 72);
@@ -158,7 +163,7 @@ LRESULT CALLBACK AMWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SetTextColor(hdc, RGB(255, 255, 255));
             DrawMoveable(hdc, &moveableAreaPenBrush, insideDraggable);
             DrawExitArea(hwnd, hdc, &exitAreaBrush, insideExit);
-            DrawPushButton(hdc, &buttonPenBrush, pushButtonArea, insidePushButton);
+            DrawPushButton(hdc, &buttonPenBrush, rectPushButtonArea, insidePushButton);
 
             EndPaint(hwnd, &ps);
 

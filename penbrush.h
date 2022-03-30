@@ -42,4 +42,5 @@ bool DestroyColorPenBrush(PT_COLORPENBRUSH ptColorpenbrush)
         DeleteObject(ptColorpenbrush->brush);
     }
     ptColorpenbrush->brush = nullptr;
+    return true;
 }
